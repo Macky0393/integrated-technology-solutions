@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITS Admin - Inquiries</title>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:#f4f7fb;
+  color:#102033;
+}
+
+header{
+  background:#061326;
+  color:white;
+  padding:20px;
+}
+
+header h1{
+  margin:0;
+  font-size:22px;
+}
+
+header p{
+  margin:6px 0 0;
+  color:#91a8bf;
+  font-size:13px;
+}
+
+.container{
+  max-width:1200px;
+  margin:auto;
+  padding:25px 15px;
+}
+
+.toolbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:20px;
+}
+
+button,select,input{
+  padding:11px 13px;
+  border:1px solid #d4dee8;
+  border-radius:8px;
+  background:white;
+}
+
+button{
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.refresh{
+  background:#087fb1;
+  color:white;
+  border:0;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:15px;
+  margin-bottom:20px;
+}
+
+.stat{
+  background:white;
+  border-radius:12px;
+  padding:20px;
+  border:1px solid #e1e8ef;
+}
+
+.stat strong{
+  display:block;
+  font-size:28px;
+  color:#087fb1;
+}
+
+.stat span{
+  color:#687a90;
+  font-size:13px;
+}
+
+.table-wrap{
+  background:white;
+  border-radius:14px;
+  border:1px solid #e1e8ef;
+  overflow:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:850px;
+}
+
+th,td{
+  padding:14px;
+  border-bottom:1px solid #edf1f5;
+  text-align:left;
+  font-size:13px;
+}
+
+th{
+  background:#f8fafc;
+}
+
+.status{
+  padding:6px 9px;
+  border-radius:20px;
+  font-size:11px;
+  font-weight:bold;
+  display:inline-block;
+}
+
+.new{
+  background:#e1f4ff;
+  color:#0876a5;
+}
+
+.progress{
+  background:#fff3cd;
+  color:#8a6500;
+}
+
+.quoted{
+  background:#e5ddff;
+  color:#5634a8;
+}
+
+.completed{
+  background:#dff7e8;
+  color:#13733b;
+}
+
+.cancelled{
+  background:#ffe1e1;
+  color:#a32626;
+}
+
+.view-btn{
+  background:#061326;
+  color:white;
+  border:0;
+}
+
+#message{
+  margin:15px 0;
+  padding:12px;
+  border-radius:8px;
+  display:none;
+}
+
+.success{
+  background:#e1f7e9;
+  color:#13733b;
+}
+
+.error{
+  background:#ffe4e4;
+  color:#a32626;
+}
+
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:#0009;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  z-index:10;
+}
+
+.modal.show{
+  display:flex;
+}
+
+.modal-box{
+  background:white;
+  width:min(600px,100%);
+  max-height:90vh;
+  overflow:auto;
+  border-radius:15px;
+  padding:25px;
+  position:relative;
+}
+
+.close{
+  position:absolute;
+  right:15px;
+  top:10px;
+  border:0;
+  background:transparent;
+  font-size:25px;
+}
+
+.detail{
+  padding:12px;
+  background:#f6f8fb;
+  border-radius:8px;
+  margin-bottom:10px;
+}
+
+.detail strong{
+  display:block;
+  color:#687a90;
+  font-size:11px;
+  margin-bottom:4px;
+}
+
+@media(max-width:700px){
+  .stats{
+    grid-template-columns:1fr 1fr;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Integrated Technology Solutions</h1>
+  <p>Quotation & Inquiry Dashboard</p>
+</header>
+
+<div class="container">
+
+  <div class="toolbar">
+
+    <input
+      id="search"
+      type="search"
+      placeholder="Search customer..."
+      oninput="filterData()"
+    >
+
+    <select id="statusFilter" onchange="filterData()">
+      <option value="">All Status</option>
+      <option value="New">New</option>
+      <option value="In Progress">In Progress</option>
+      <option value="Quoted">Quoted</option>
+      <option value="Completed">Completed</option>
+      <option value="Cancelled">Cancelled</option>
+    </select>
+
+    <button class="refresh" onclick="loadInquiries()">
+      ↻ Refresh
+    </button>
+
+  </div>
+
+  <div class="stats">
+
+    <div class="stat">
+      <strong id="total">0</strong>
+      <span>Total Inquiries</span>
+    </div>
+
+    <div class="stat">
+      <strong id="newCount">0</strong>
+      <span>New</span>
+    </div>
+
+    <div class="stat">
+      <strong id="quotedCount">0</strong>
+      <span>Quoted</span>
+    </div>
+
+    <div class="stat">
+      <strong id="completedCount">0</strong>
+      <span>Completed</span>
+    </div>
+
+  </div>
+
+  <div id="message"></div>
+
+  <div class="table-wrap">
+
+    <table>
+
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Customer</th>
+          <th>Service</th>
+          <th>Phone</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+
+      <tbody id="inquiries">
+      </tbody>
+
+    </table>
+
+  </div>
+
+</div>
+
+
+<div id="modal" class="modal">
+
+  <div class="modal-box">
+
+    <button class="close" onclick="closeModal()">×</button>
+
+    <h2>Inquiry Details</h2>
+
+    <div id="details"></div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+let inquiries = [];
+
+const params = new URLSearchParams(window.location.search);
+const token = params.get("token") || "";
+
+async function loadInquiries(){
+
+  showMessage("Loading inquiries...", "success");
+
+  try{
+
+    const url =
+      "/admin?token=" +
+      encodeURIComponent(token);
+
+    const response = await fetch(url);
+
+    const data = await response.json();
+
+    if(!response.ok){
+
+      throw new Error(
+        data.error || "Unable to load inquiries."
+      );
+
+    }
+
+    inquiries = data.inquiries || [];
+
+    updateStats();
+
+    filterData();
+
+    showMessage(
+      "Inquiry list updated.",
+      "success"
+    );
+
+  }catch(error){
+
+    showMessage(
+      error.message,
+      "error"
+    );
+
+  }
+
+}
+
+
+function updateStats(){
+
+  document.getElementById("total").textContent =
+    inquiries.length;
+
+  document.getElementById("newCount").textContent =
+    inquiries.filter(x =>
+      !x.status || x.status === "New"
+    ).length;
+
+  document.getElementById("quotedCount").textContent =
+    inquiries.filter(x =>
+      x.status === "Quoted"
+    ).length;
+
+  document.getElementById("completedCount").textContent =
+    inquiries.filter(x =>
+      x.status === "Completed"
+    ).length;
+
+}
+
+
+function filterData(){
+
+  const search =
+    document.getElementById("search")
+      .value
+      .toLowerCase();
+
+  const status =
+    document.getElementById("statusFilter")
+      .value;
+
+  const filtered =
+    inquiries.filter(item => {
+
+      const customer =
+        String(item.name || "")
+          .toLowerCase();
+
+      const service =
+        String(item.service || "")
+          .toLowerCase();
+
+      const phone =
+        String(item.phone || "")
+          .toLowerCase();
+
+      const itemStatus =
+        item.status || "New";
+
+      return (
+        (!search ||
+          customer.includes(search) ||
+          service.includes(search) ||
+          phone.includes(search))
+        &&
+        (!status ||
+          itemStatus === status)
+      );
+
+    });
+
+  render(filtered);
+
+}
+
+
+function render(list){
+
+  const tbody =
+    document.getElementById("inquiries");
+
+  tbody.innerHTML = "";
+
+  if(!list.length){
+
+    tbody.innerHTML =
+      `<tr>
+        <td colspan="6">
+          No inquiries found.
+        </td>
+      </tr>`;
+
+    return;
+  }
+
+  list.forEach(item => {
+
+    const tr =
+      document.createElement("tr");
+
+    const date =
+      item.createdAt
+        ? new Date(item.createdAt)
+            .toLocaleString()
+        : "-";
+
+    const status =
+      item.status || "New";
+
+    let statusClass =
+      "new";
+
+    if(status === "In Progress")
+      statusClass = "progress";
+
+    if(status === "Quoted")
+      statusClass = "quoted";
+
+    if(status === "Completed")
+      statusClass = "completed";
+
+    if(status === "Cancelled")
+      statusClass = "cancelled";
+
+    tr.innerHTML = `
+
+      <td>${escapeHtml(date)}</td>
+
+      <td>
+        <strong>
+          ${escapeHtml(item.name || "-")}
+        </strong>
+      </td>
+
+      <td>
+        ${escapeHtml(item.service || "-")}
+      </td>
+
+      <td>
+        ${escapeHtml(item.phone || "-")}
+      </td>
+
+      <td>
+        <span class="status ${statusClass}">
+          ${escapeHtml(status)}
+        </span>
+      </td>
+
+      <td>
+        <button
+          class="view-btn"
+          onclick="viewInquiry('${item.id}')"
+        >
+          View
+        </button>
+      </td>
+
+    `;
+
+    tbody.appendChild(tr);
+
+  });
+
+}
+
+
+function viewInquiry(id){
+
+  const item =
+    inquiries.find(x =>
+      String(x.id) === String(id)
+    );
+
+  if(!item) return;
+
+  const details =
+    document.getElementById("details");
+
+  details.innerHTML = `
+
+    <div class="detail">
+      <strong>Inquiry ID</strong>
+      ${escapeHtml(item.id || "-")}
+    </div>
+
+    <div class="detail">
+      <strong>Date</strong>
+      ${escapeHtml(
+        item.createdAt
+          ? new Date(item.createdAt)
+              .toLocaleString()
+          : "-"
+      )}
+    </div>
+
+    <div class="detail">
+      <strong>Customer Name</strong>
+      ${escapeHtml(item.name || "-")}
+    </div>
+
+    <div class="detail">
+      <strong>Phone</strong>
+      ${escapeHtml(item.phone || "-")}
+    </div>
+
+    <div class="detail">
+      <strong>Email</strong>
+      ${escapeHtml(item.email || "-")}
+    </div>
+
+    <div class="detail">
+      <strong>Service</strong>
+      ${escapeHtml(item.service || "-")}
+    </div>
+
+    <div class="detail">
+      <strong>Location</strong>
+      ${escapeHtml(item.location || "-")}
+    </div>
+
+    <div class="detail">
+      <strong>Quantity</strong>
+      ${escapeHtml(item.quantity || "-")}
+    </div>
+
+    <div class="detail">
+      <strong>Project Details</strong>
+      ${escapeHtml(item.details || "-")}
+    </div>
+
+    <div class="detail">
+      <strong>Status</strong>
+      ${escapeHtml(item.status || "New")}
+    </div>
+
+  `;
+
+  document
+    .getElementById("modal")
+    .classList.add("show");
+
+}
+
+
+function closeModal(){
+
+  document
+    .getElementById("modal")
+    .classList.remove("show");
+
+}
+
+
+function showMessage(text,type){
+
+  const box =
+    document.getElementById("message");
+
+  box.textContent = text;
+
+  box.className = type;
+
+  box.style.display = "block";
+
+}
+
+
+function escapeHtml(value){
+
+  return String(value)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+
+}
+
+
+loadInquiries();
+
+</script>
+
+</body>
+</html>
