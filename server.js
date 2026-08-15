@@ -21,7 +21,31 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==="GET"&&u.pathname==="/api/config")return json(res,config);
  if(req.method==="POST"&&u.pathname==="/api/chat"){try{const b=await body(req);return json(res,{reply:await ai(String(b.message||""))})}catch(e){return json(res,{reply:"The AI assistant is temporarily unavailable. Please use the quotation form or Messenger."},503)}}
  if(req.method==="POST"&&u.pathname==="/api/inquiries"){try{const b=await body(req);if(!b.name||!b.phone||!b.service||!b.details)return json(res,{message:"Please complete the required fields."},400);saveInquiry(b);return json(res,{message:"Thank you! Your inquiry has been recorded. Our team can now follow up with you."})}catch(e){return json(res,{message:"Unable to save inquiry."},500)}}
- if(req.method==="GET"&&u.pathname==="/admin"){if(process.env.ADMIN_TOKEN&&u.query.token!==process.env.ADMIN_TOKEN)return json(res,{error:"Unauthorized"},401);let arr=[];try{arr=JSON.parse(fs.readFileSync(DATA,"utf8"))}catch{};return json(res,{inquiries:arr})}
+ if(req.method==="GET"&&u.pathname==="/admin"){
+  const adminToken=process.env.ADMIN_TOKEN;
+
+  if(!adminToken){
+    return json(res,{error:"Admin access is not configured."},503);
+  }
+
+  if(u.query.token!==adminToken){
+    return json(res,{error:"Unauthorized"},401);
+  }
+
+  let arr=[];
+
+  try{
+    arr=JSON.parse(
+      fs.readFileSync(DATA,"utf8")
+    );
+  }catch(e){
+    arr=[];
+  }
+
+  return json(res,{
+    inquiries:arr
+  });
+}
  let p=path.normalize(path.join(ROOT,u.pathname==="/"?"index.html":u.pathname));if(!p.startsWith(ROOT))return json(res,{error:"Forbidden"},403);fs.readFile(p,(err,data)=>{if(err)return json(res,{error:"Not found"},404);res.writeHead(200,{"Content-Type":mime[path.extname(p)]||"application/octet-stream"});res.end(data)})
 });
 server.listen(PORT,()=>console.log(`ITS website running on http://localhost:${PORT}`));
